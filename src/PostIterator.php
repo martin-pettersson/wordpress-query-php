@@ -39,6 +39,13 @@ final class PostIterator implements Iterator
     private int $index;
 
     /**
+     * Registered filter predicates.
+     *
+     * @var array
+     */
+    private array $filterPredicates;
+
+    /**
      * Current post.
      *
      * @var \WP_Post|null
@@ -54,18 +61,13 @@ final class PostIterator implements Iterator
     {
         $this->query = $query;
         $this->index = 0;
+        $this->filterPredicates = [];
         $this->post = null;
     }
 
     #[Override]
-    public function current(): WP_Post
+    public function current(): ?WP_Post
     {
-        if (is_null($this->post)) {
-            $this->query->the_post();
-
-            $this->post = get_post();
-        }
-
         return $this->post;
     }
 
@@ -85,13 +87,21 @@ final class PostIterator implements Iterator
     #[Override]
     public function valid(): bool
     {
-        $valid = $this->query->have_posts();
-
-        if (! $valid) {
-            wp_reset_postdata();
+        if (! is_null($this->post)) {
+            return true;
         }
 
-        return $valid;
+        $post = $this->nextValidPost();
+
+        if (is_null($post)) {
+            wp_reset_postdata();
+
+            return false;
+        }
+
+        $this->post = $post;
+
+        return true;
     }
 
     #[Override]
@@ -99,6 +109,7 @@ final class PostIterator implements Iterator
     {
         $this->query->rewind_posts();
         $this->index = 0;
+        $this->post = null;
     }
 
     /**
@@ -119,5 +130,56 @@ final class PostIterator implements Iterator
     public function pageCount(): int
     {
         return $this->query->max_num_pages;
+    }
+
+    /**
+     * Register given filter predicate.
+     *
+     * @param callable $predicate Arbitrary filter predicate.
+     * @return $this Same instance for method chaining.
+     */
+    public function filter(callable $predicate): PostIterator
+    {
+        $this->filterPredicates[] = $predicate;
+
+        return $this;
+    }
+
+    /**
+     * Retrieve the next valid post.
+     *
+     * @return \WP_Post|null Next valid post if found.
+     */
+    private function nextValidPost(): ?WP_Post
+    {
+        while ($this->query->have_posts()) {
+            $this->query->the_post();
+
+            /** @var \WP_Post $post */
+            $post = get_post();
+
+            if ($this->isValid($post)) {
+                return $post;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Determine whether a given post is considered valid.
+     *
+     * @param \WP_Post $post Arbitrary post.
+     * @return bool True if the given post is considered valid.
+     */
+    private function isValid(WP_Post $post): bool
+    {
+        foreach ($this->filterPredicates as $predicate) {
+            if (! $predicate($post)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

@@ -9,7 +9,10 @@ function wp_parse_args($parameters)
 
 function absint() { }
 
-function get_taxonomies() { }
+function get_taxonomies()
+{
+    return [];
+}
 
 function do_action() { }
 
@@ -31,7 +34,10 @@ function get_post_type_object() { }
 
 function get_current_user_id() { }
 
-function get_post_stati() { }
+function get_post_stati()
+{
+    return [];
+}
 
 function is_user_logged_in() { }
 

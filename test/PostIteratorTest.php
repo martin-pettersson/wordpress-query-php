@@ -60,9 +60,16 @@ final class PostIteratorTest extends TestCase
     {
         $postMock = $this->getMockBuilder(WP_Post::class)->disableOriginalConstructor()->getMock();
 
+        $this->queryMock->expects($this->once())->method('have_posts')->willReturn(true);
         $this->queryMock->expects($this->once())->method('the_post');
         $this->getFunctionMock(__NAMESPACE__, 'get_post')->expects($this->once())->willReturn($postMock);
 
+        $this->postIterator->rewind();
+        $this->postIterator->next();
+
+        $this->assertTrue($this->postIterator->valid());
+        $this->assertTrue($this->postIterator->valid());
+        $this->assertTrue($this->postIterator->valid());
         $this->assertSame($postMock, $this->postIterator->current());
         $this->assertSame($postMock, $this->postIterator->current());
         $this->assertSame($postMock, $this->postIterator->current());
@@ -73,16 +80,18 @@ final class PostIteratorTest extends TestCase
     {
         $postMock = $this->getMockBuilder(WP_Post::class)->disableOriginalConstructor()->getMock();
 
+        $this->queryMock->method('have_posts')->willReturn(true);
         $this->queryMock->expects($this->exactly(2))->method('the_post');
         $this->getFunctionMock(__NAMESPACE__, 'get_post')->expects($this->exactly(2))->willReturn($postMock);
 
-        $this->postIterator->current();
+        $this->postIterator->rewind();
 
+        $this->assertTrue($this->postIterator->valid());
         $this->assertEquals(0, $this->postIterator->key());
 
         $this->postIterator->next();
-        $this->postIterator->current();
 
+        $this->assertTrue($this->postIterator->valid());
         $this->assertEquals(1, $this->postIterator->key());
     }
 
@@ -90,6 +99,11 @@ final class PostIteratorTest extends TestCase
     public function shouldDetermineWhetherIteratorIsValid(): void
     {
         $this->queryMock->expects($this->once())->method('have_posts')->willReturn(true);
+        $this->getFunctionMock(__NAMESPACE__, 'get_post')
+            ->expects($this->once())
+            ->willReturn($this->getMockBuilder(WP_Post::class)->disableOriginalConstructor()->getMock());
+
+        $this->postIterator->next();
 
         $this->assertTrue($this->postIterator->valid());
     }
@@ -115,5 +129,26 @@ final class PostIteratorTest extends TestCase
         $this->postIterator->rewind();
 
         $this->assertEquals(0, $this->postIterator->key());
+    }
+
+    #[Test]
+    public function shouldFilterItems(): void
+    {
+        $postOneMock = $this->getMockBuilder(WP_Post::class)->disableOriginalConstructor()->getMock();
+        $postTwoMock = $this->getMockBuilder(WP_Post::class)->disableOriginalConstructor()->getMock();
+
+        $postOneMock->ID = 1;
+        $postTwoMock->ID = 2;
+
+        $this->queryMock->method('have_posts')->willReturnOnConsecutiveCalls(true, true, false);
+        $this->getFunctionMock(__NAMESPACE__, 'get_post')
+            ->expects($this->exactly(2))
+            ->willReturnOnConsecutiveCalls($postOneMock, $postTwoMock);
+        $this->getFunctionMock(__NAMESPACE__, 'wp_reset_postdata');
+
+        $array = iterator_to_array($this->postIterator->filter(static fn($post) => $post->ID > 1));
+
+        $this->assertCount(1, $array);
+        $this->assertEquals(2, $array[0]->ID);
     }
 }

@@ -4,5 +4,5 @@ parameters:
     paths:
         - src
     ignoreErrors:
+        - identifier: missingType.generics
         - identifier: missingType.iterableValue
-        - identifier: function.notFound
