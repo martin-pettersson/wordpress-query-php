@@ -56,12 +56,13 @@ final class PostIterator implements Iterator
      * Create a new post iterator instance.
      *
      * @param \WP_Query $query Arbitrary post query.
+     * @param array $filterPredicates Registered filter predicates.
      */
-    public function __construct(WP_Query $query)
+    public function __construct(WP_Query $query, array $filterPredicates = [])
     {
         $this->query = $query;
         $this->index = 0;
-        $this->filterPredicates = [];
+        $this->filterPredicates = $filterPredicates;
         $this->post = null;
     }
 
@@ -113,36 +114,14 @@ final class PostIterator implements Iterator
     }
 
     /**
-     * Determine the number of posts in query.
-     *
-     * @return int Number of posts in query.
-     */
-    public function count(): int
-    {
-        return $this->query->found_posts;
-    }
-
-    /**
-     * Determine the number of pages in query.
-     *
-     * @return int Number of pages in query.
-     */
-    public function pageCount(): int
-    {
-        return $this->query->max_num_pages;
-    }
-
-    /**
-     * Register given filter predicate.
+     * Produce a post iterator with given filter predicate.
      *
      * @param callable $predicate Arbitrary filter predicate.
-     * @return $this Same instance for method chaining.
+     * @return \N7e\WordPress\PostIterator Post iterator with given filter predicate.
      */
     public function filter(callable $predicate): PostIterator
     {
-        $this->filterPredicates[] = $predicate;
-
-        return $this;
+        return new PostIterator($this->query, array_merge($this->filterPredicates, [$predicate]));
     }
 
     /**

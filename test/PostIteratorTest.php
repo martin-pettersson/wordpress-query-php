@@ -36,26 +36,6 @@ final class PostIteratorTest extends TestCase
     }
 
     #[Test]
-    public function shouldDeterminePostCount(): void
-    {
-        $count = 42;
-
-        $this->queryMock->found_posts = $count;
-
-        $this->assertEquals($count, $this->postIterator->count());
-    }
-
-    #[Test]
-    public function shouldDeterminePageCount(): void
-    {
-        $count = 7;
-
-        $this->queryMock->max_num_pages = $count;
-
-        $this->assertEquals($count, $this->postIterator->pageCount());
-    }
-
-    #[Test]
     public function shouldOnlySetUpCurrentPostOnce(): void
     {
         $postMock = $this->getMockBuilder(WP_Post::class)->disableOriginalConstructor()->getMock();
